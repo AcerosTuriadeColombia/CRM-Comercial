@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CRM Ventas — Aceros Turia</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --steel: #1a1f2e;
+    --steel-mid: #252b3b;
+    --steel-light: #2e3550;
+    --accent: #e8a020;
+    --accent-dim: #c4861a;
+    --success: #2ecc8a;
+    --danger: #e84040;
+    --text: #e8eaf0;
+    --text-muted: #8890a8;
+    --border: rgba(255,255,255,0.08);
+    --card: rgba(255,255,255,0.04);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Barlow',sans-serif; background:var(--steel); color:var(--text); min-height:100vh; }
+
+  /* LOGIN */
+  #login-screen {
+    min-height:100vh; display:flex; align-items:center; justify-content:center;
+    background: linear-gradient(135deg, #0d1117 0%, #1a1f2e 50%, #0d1117 100%);
+    position:relative; overflow:hidden;
+  }
+  #login-screen::before {
+    content:''; position:absolute; inset:0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 40px, rgba(232,160,32,0.03) 40px, rgba(232,160,32,0.03) 41px),
+                repeating-linear-gradient(90deg, transparent, transparent 40px, rgba(232,160,32,0.03) 40px, rgba(232,160,32,0.03) 41px);
+  }
+  .login-card {
+    background: rgba(37,43,59,0.95); border:1px solid rgba(232,160,32,0.2);
+    border-radius:12px; padding:48px 40px; width:420px; position:relative; z-index:1;
+    box-shadow: 0 40px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(232,160,32,0.1);
+  }
+  .login-logo { text-align:center; margin-bottom:32px; }
+  .login-logo .brand { font-family:'Barlow Condensed',sans-serif; font-size:28px; font-weight:800; letter-spacing:2px; color:var(--accent); }
+  .login-logo .sub { font-size:12px; color:var(--text-muted); letter-spacing:3px; text-transform:uppercase; margin-top:4px; }
+  .login-title { font-family:'Barlow Condensed',sans-serif; font-size:22px; font-weight:700; margin-bottom:24px; color:var(--text); }
+  .field { margin-bottom:16px; }
+  .field label { display:block; font-size:11px; font-weight:600; letter-spacing:1.5px; text-transform:uppercase; color:var(--text-muted); margin-bottom:8px; }
+  .field select, .field input {
+    width:100%; padding:12px 16px; background:rgba(255,255,255,0.05); border:1px solid var(--border);
+    border-radius:8px; color:var(--text); font-family:'Barlow',sans-serif; font-size:14px;
+    outline:none; transition:border-color .2s;
+  }
+  .field select:focus, .field input:focus { border-color:var(--accent); }
+  .field select option { background:#252b3b; }
+  .btn-primary {
+    width:100%; padding:14px; background:var(--accent); border:none; border-radius:8px;
+    color:#0d1117; font-family:'Barlow Condensed',sans-serif; font-size:16px; font-weight:700;
+    letter-spacing:1px; cursor:pointer; transition:background .2s, transform .1s;
+    margin-top:8px;
+  }
+  .btn-primary:hover { background:var(--accent-dim); }
+  .btn-primary:active { transform:scale(0.98); }
+  .error-msg { color:var(--danger); font-size:13px; margin-top:8px; text-align:center; }
+
+  /* APP LAYOUT */
+  #app { display:none; min-height:100vh; flex-direction:column; }
+  .topbar {
+    background:var(--steel-mid); border-bottom:1px solid var(--border);
+    padding:0 24px; height:60px; display:flex; align-items:center; justify-content:space-between;
+    position:sticky; top:0; z-index:100;
+  }
+  .topbar-brand { font-family:'Barlow Condensed',sans-serif; font-size:20px; font-weight:800; letter-spacing:2px; color:var(--accent); }
+  .topbar-user { display:flex; align-items:center; gap:12px; }
+  .topbar-user .name { font-size:13px; font-weight:500; }
+  .topbar-user .role-badge {
+    font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase;
+    padding:3px 8px; border-radius:4px; background:rgba(232,160,32,0.15); color:var(--accent);
+  }
+  .btn-logout {
+    padding:6px 14px; background:transparent; border:1px solid var(--border);
+    border-radius:6px; color:var(--text-muted); font-size:12px; cursor:pointer;
+    transition:all .2s;
+  }
+  .btn-logout:hover { border-color:var(--danger); color:var(--danger); }
+
+  .nav-tabs {
+    background:var(--steel-mid); border-bottom:1px solid var(--border);
+    padding:0 24px; display:flex; gap:4px;
+  }
+  .nav-tab {
+    padding:12px 20px; background:transparent; border:none; color:var(--text-muted);
+    font-family:'Barlow',sans-serif; font-size:13px; font-weight:500; cursor:pointer;
+    border-bottom:2px solid transparent; transition:all .2s; white-space:nowrap;
+  }
+  .nav-tab:hover { color:var(--text); }
+  .nav-tab.active { color:var(--accent); border-bottom-color:var(--accent); }
+
+  .content { padding:28px 24px; max-width:1100px; margin:0 auto; width:100%; flex:1; }
+
+  /* CARDS */
+  .card {
+    background:var(--card); border:1px solid var(--border); border-radius:12px; padding:24px;
+    margin-bottom:20px;
+  }
+  .card-title {
+    font-family:'Barlow Condensed',sans-serif; font-size:18px; font-weight:700;
+    letter-spacing:1px; margin-bottom:20px; display:flex; align-items:center; gap:8px;
+  }
+  .card-title span { color:var(--accent); }
+
+  /* STATS ROW */
+  .stats-row { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:16px; margin-bottom:24px; }
+  .stat-card {
+    background:var(--card); border:1px solid var(--border); border-radius:10px; padding:20px;
+    text-align:center;
+  }
+  .stat-num { font-family:'Barlow Condensed',sans-serif; font-size:36px; font-weight:800; color:var(--accent); }
+  .stat-label { font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px; margin-top:4px; }
+
+  /* FORMS */
+  .form-row { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  .form-row-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; }
+  @media(max-width:600px) { .form-row, .form-row-3 { grid-template-columns:1fr; } }
+  .form-field { margin-bottom:16px; }
+  .form-field label { display:block; font-size:11px; font-weight:600; letter-spacing:1.5px; text-transform:uppercase; color:var(--text-muted); margin-bottom:8px; }
+  .form-field input, .form-field select, .form-field textarea {
+    width:100%; padding:10px 14px; background:rgba(255,255,255,0.05); border:1px solid var(--border);
+    border-radius:8px; color:var(--text); font-family:'Barlow',sans-serif; font-size:14px; outline:none;
+    transition:border-color .2s;
+  }
+  .form-field input:focus, .form-field select:focus, .form-field textarea:focus { border-color:var(--accent); }
+  .form-field select option { background:#252b3b; }
+  .form-field textarea { resize:vertical; min-height:80px; }
+  .btn-action {
+    padding:10px 24px; background:var(--accent); border:none; border-radius:8px;
+    color:#0d1117; font-family:'Barlow Condensed',sans-serif; font-size:14px; font-weight:700;
+    letter-spacing:1px; cursor:pointer; transition:background .2s;
+  }
+  .btn-action:hover { background:var(--accent-dim); }
+  .btn-sm {
+    padding:5px 12px; font-size:12px; border-radius:6px; border:none; cursor:pointer;
+    font-family:'Barlow',sans-serif; font-weight:600; transition:all .2s;
+  }
+  .btn-danger { background:rgba(232,64,64,0.15); color:var(--danger); border:1px solid rgba(232,64,64,0.3); }
+  .btn-danger:hover { background:rgba(232,64,64,0.25); }
+
+  /* TABLE */
+  .table-wrap { overflow-x:auto; }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th { text-align:left; padding:10px 14px; font-size:10px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:var(--text-muted); border-bottom:1px solid var(--border); }
+  td { padding:12px 14px; border-bottom:1px solid rgba(255,255,255,0.04); vertical-align:middle; }
+  tr:last-child td { border-bottom:none; }
+  tr:hover td { background:rgba(255,255,255,0.02); }
+
+  /* BADGES */
+  .badge {
+    display:inline-block; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:600;
+  }
+  .badge-green { background:rgba(46,204,138,0.15); color:var(--success); }
+  .badge-yellow { background:rgba(232,160,32,0.15); color:var(--accent); }
+  .badge-red { background:rgba(232,64,64,0.15); color:var(--danger); }
+  .badge-blue { background:rgba(64,120,232,0.15); color:#6090f8; }
+  .badge-gray { background:rgba(136,144,168,0.15); color:var(--text-muted); }
+
+  /* WEEK DISPLAY */
+  .week-header {
+    font-family:'Barlow Condensed',sans-serif; font-size:24px; font-weight:700;
+    color:var(--accent); margin-bottom:20px;
+  }
+  .week-days { display:grid; grid-template-columns:repeat(5,1fr); gap:12px; margin-bottom:20px; }
+  @media(max-width:700px) { .week-days { grid-template-columns:1fr 1fr; } }
+  .day-card {
+    background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:10px; padding:14px;
+  }
+  .day-name { font-size:11px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(--text-muted); margin-bottom:8px; }
+  .day-visits { display:flex; flex-direction:column; gap:6px; }
+  .visit-chip {
+    background:rgba(232,160,32,0.1); border:1px solid rgba(232,160,32,0.2);
+    border-radius:6px; padding:6px 10px; font-size:12px;
+  }
+  .visit-chip.prospecto { background:rgba(64,120,232,0.1); border-color:rgba(64,120,232,0.2); }
+  .visit-chip .vc-name { font-weight:600; }
+  .visit-chip .vc-city { color:var(--text-muted); font-size:11px; }
+
+  /* PROGRESS BAR */
+  .progress-bar { background:rgba(255,255,255,0.08); border-radius:4px; height:6px; overflow:hidden; margin-top:6px; }
+  .progress-fill { height:100%; background:var(--accent); border-radius:4px; transition:width .5s; }
+
+  /* EMPTY STATE */
+  .empty-state { text-align:center; padding:40px; color:var(--text-muted); }
+  .empty-state .icon { font-size:40px; margin-bottom:12px; }
+  .empty-state p { font-size:14px; }
+
+  /* TOAST */
+  #toast {
+    position:fixed; bottom:24px; right:24px; padding:12px 20px;
+    background:var(--success); color:#0d1117; border-radius:8px; font-weight:600; font-size:14px;
+    transform:translateY(100px); opacity:0; transition:all .3s; z-index:999;
+  }
+  #toast.show { transform:translateY(0); opacity:1; }
+
+  .section { display:none; }
+  .section.active { display:block; }
+
+  .divider { border:none; border-top:1px solid var(--border); margin:20px 0; }
+
+  .supervisor-tabs { display:flex; gap:8px; margin-bottom:20px; flex-wrap:wrap; }
+  .sup-tab {
+    padding:8px 16px; border-radius:20px; font-size:12px; font-weight:600; cursor:pointer;
+    border:1px solid var(--border); background:transparent; color:var(--text-muted); transition:all .2s;
+  }
+  .sup-tab.active { background:var(--accent); color:#0d1117; border-color:var(--accent); }
+
+  .vendedor-row { display:flex; align-items:center; justify-content:space-between; padding:14px; background:rgba(255,255,255,0.03); border-radius:8px; margin-bottom:8px; }
+  .vendedor-info .vname { font-weight:600; font-size:14px; }
+  .vendedor-info .vcity { font-size:12px; color:var(--text-muted); }
+  .vendedor-stats { display:flex; gap:16px; }
+  .vstat { text-align:center; }
+  .vstat-num { font-family:'Barlow Condensed',sans-serif; font-size:20px; font-weight:700; color:var(--accent); }
+  .vstat-label { font-size:10px; color:var(--text-muted); text-transform:uppercase; }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">
+        <div class="brand">⚙ ACEROS TURIA</div>
+        <div style="color:#ffffff;font-size:13px;letter-spacing:3px;text-transform:uppercase;margin-top:6px">CRM Comercial</div>
+      </div>
+    <div class="login-title">Iniciar sesión</div>
+    <div class="field">
+      <label>Usuario</label>
+      <select id="login-user">
+        <option value="">— Selecciona tu nombre —</option>
+        <option value="supervisor|Mauricio Lopera">Mauricio Lopera (Gerente Comercial)</option>
+        <option value="vendedor|Diego Alejandro Quintero Carbajal">Diego Alejandro Quintero Carbajal</option>
+        <option value="vendedor|Eliana Rodas Aguirre">Eliana Rodas Aguirre</option>
+        <option value="vendedor|Olmes Ortega">Olmes Ortega</option>
+        <option value="vendedor|Juan Pablo Acevedo Vargas">Juan Pablo Acevedo Vargas</option>
+        <option value="vendedor|Angie Ortiz Giraldo">Angie Ortiz Giraldo</option>
+        <option value="vendedor|Jorge Eliecer Calvo Meza">Jorge Eliecer Calvo Meza</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>PIN de acceso</label>
+      <input type="password" id="login-pin" placeholder="••••" maxlength="4">
+    </div>
+    <button class="btn-primary" onclick="doLogin()">INGRESAR</button>
+    <div class="error-msg" id="login-error"></div>
+
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="topbar">
+    <div class="topbar-brand">⚙ ACEROS TURIA</div>
+    <div class="topbar-user">
+      <div>
+        <div class="name" id="topbar-name"></div>
+        <div class="role-badge" id="topbar-role"></div>
+      </div>
+      <button class="btn-logout" onclick="doLogout()">Salir</button>
+    </div>
+  </div>
+
+  <div class="nav-tabs" id="nav-tabs"></div>
+
+  <div class="content">
+
+    <!-- SECCIÓN: RUTEO SEMANAL (vendedor) -->
+    <div class="section" id="sec-ruteo">
+      <div class="card">
+        <div class="card-title">📅 Planificación de Ruta — <span id="ruteo-semana"></span></div>
+        <p style="font-size:13px;color:var(--text-muted);margin-bottom:20px;">Registra las visitas que planeas realizar esta semana.</p>
+
+        <div class="form-row">
+          <div class="form-field">
+            <label>Día</label>
+            <select id="r-dia">
+              <option value="Lunes">Lunes</option>
+              <option value="Martes">Martes</option>
+              <option value="Miércoles">Miércoles</option>
+              <option value="Jueves">Jueves</option>
+              <option value="Viernes">Viernes</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label>Tipo</label>
+            <select id="r-tipo">
+              <option value="cliente">Cliente existente</option>
+              <option value="prospecto">Prospecto nuevo</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-field">
+            <label>Nombre del cliente / prospecto</label>
+            <input type="text" id="r-nombre" placeholder="Ej: Ferretería Los Andes">
+          </div>
+          <div class="form-field">
+            <label>Ciudad</label>
+            <input type="text" id="r-ciudad" placeholder="Ej: Medellín">
+          </div>
+        </div>
+        <div class="form-field">
+          <label>Notas (opcional)</label>
+          <textarea id="r-notas" placeholder="Objetivo de la visita, producto a ofrecer..."></textarea>
+        </div>
+        <button class="btn-action" onclick="agregarRuta()">+ Agregar a la ruta</button>
+      </div>
+
+      <div class="card">
+        <div class="card-title">📋 Ruta de esta semana</div>
+        <div class="week-days" id="ruteo-dias"></div>
+      </div>
+    </div>
+
+    <!-- SECCIÓN: REGISTRO DE VISITAS (vendedor) -->
+    <div class="section" id="sec-visitas">
+      <div class="card">
+        <div class="card-title">✅ Registrar Visita Realizada</div>
+        <div class="form-row">
+          <div class="form-field">
+            <label>Cliente / Prospecto visitado</label>
+            <select id="v-cliente">
+              <option value="">— Selecciona de tu ruta —</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label>Fecha</label>
+            <input type="date" id="v-fecha">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-field">
+            <label>Resultado</label>
+            <select id="v-resultado">
+              <option value="positivo">Positivo — generó pedido / avanzó</option>
+              <option value="en_proceso">En proceso — requiere seguimiento</option>
+              <option value="negativo">Negativo — no hubo interés</option>
+              <option value="no_encontrado">No encontrado / ausente</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label>¿Generó pedido?</label>
+            <select id="v-pedido">
+              <option value="no">No</option>
+              <option value="si">Sí</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-field">
+          <label>Observaciones</label>
+          <textarea id="v-obs" placeholder="Detalles de la visita, próximos pasos..."></textarea>
+        </div>
+        <div style="margin-bottom:16px">
+          <button class="btn-action" style="background:var(--steel-light);color:var(--text);border:1px solid var(--border);margin-bottom:8px;width:100%" onclick="capturarUbicacion()">📍 Capturar mi ubicación</button>
+          <div id="gps-status" style="font-size:12px;color:var(--text-muted);text-align:center"></div>
+        </div>
+        <button class="btn-action" onclick="registrarVisita()">Registrar visita</button>
+      </div>
+
+      <div class="card">
+        <div class="card-title">📊 Mis visitas registradas</div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Cliente</th><th>Fecha / Hora</th><th>Tipo</th><th>Resultado</th><th>Pedido</th><th>Notas</th><th>Ubicación</th>
+              </tr>
+            </thead>
+            <tbody id="visitas-tabla"></tbody>
+          </table>
+        </div>
+        <div class="empty-state" id="visitas-empty" style="display:none">
+          <div class="icon">📋</div>
+          <p>Aún no has registrado visitas esta semana.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECCIÓN: MIS ESTADÍSTICAS (vendedor) -->
+    <div class="section" id="sec-stats">
+      <div class="stats-row" id="my-stats-row"></div>
+      <div class="card">
+        <div class="card-title">📈 Progreso semanal</div>
+        <div id="progreso-semanal"></div>
+      </div>
+    </div>
+
+    <!-- SECCIÓN: DASHBOARD SUPERVISOR -->
+    <div class="section" id="sec-dashboard">
+      <div class="card-title" style="margin-bottom:20px;font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:800;">
+        📊 Dashboard — Semana actual
+      </div>
+      <div class="stats-row" id="dash-stats"></div>
+
+      <div class="supervisor-tabs">
+        <button class="sup-tab active" onclick="filterDash('todos',this)">Todos</button>
+        <button class="sup-tab" onclick="filterDash('Diego Alejandro Quintero Carbajal',this)">Diego</button>
+        <button class="sup-tab" onclick="filterDash('Eliana Rodas Aguirre',this)">Eliana</button>
+        <button class="sup-tab" onclick="filterDash('Olmes Ortega',this)">Olmes</button>
+        <button class="sup-tab" onclick="filterDash('Juan Pablo Acevedo Vargas',this)">Juan Pablo</button>
+        <button class="sup-tab" onclick="filterDash('Angie Ortiz Giraldo',this)">Angie</button>
+        <button class="sup-tab" onclick="filterDash('Jorge Eliecer Calvo Meza',this)">Jorge</button>
+      </div>
+
+      <div class="card">
+        <div class="card-title">👥 Resumen por vendedor</div>
+        <div id="dash-vendedores"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">📋 Todas las visitas registradas</div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Vendedor</th><th>Cliente</th><th>Fecha</th><th>Tipo</th><th>Resultado</th><th>Pedido</th><th>GPS</th></tr>
+            </thead>
+            <tbody id="dash-tabla"></tbody>
+          </table>
+        </div>
+        <div class="empty-state" id="dash-empty" style="display:none">
+          <div class="icon">📊</div>
+          <p>No hay visitas registradas esta semana.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECCIÓN: CAMBIAR PIN -->
+    <div class="section" id="sec-config">
+      <div class="card">
+        <div class="card-title">⚙️ Cambiar mi PIN</div>
+        <p style="font-size:13px;color:var(--text-muted);margin-bottom:20px;">Tu PIN es personal. Cámbialo por uno que solo tú conozcas.</p>
+        <div class="form-field">
+          <label>PIN actual</label>
+          <input type="password" id="pin-actual" placeholder="••••" maxlength="4" style="max-width:200px">
+        </div>
+        <div class="form-field">
+          <label>Nuevo PIN</label>
+          <input type="password" id="pin-nuevo" placeholder="••••" maxlength="4" style="max-width:200px">
+        </div>
+        <div class="form-field">
+          <label>Confirmar nuevo PIN</label>
+          <input type="password" id="pin-confirmar" placeholder="••••" maxlength="4" style="max-width:200px">
+        </div>
+        <button class="btn-action" onclick="cambiarPin()">Cambiar PIN</button>
+        <div id="pin-msg" style="margin-top:12px;font-size:13px"></div>
+      </div>
+    </div>
+
+    <!-- SECCIÓN: RUTAS DEL EQUIPO (supervisor) -->
+    <div class="section" id="sec-rutas-sup">
+      <div class="card">
+        <div class="card-title">🗺️ Rutas planificadas del equipo</div>
+        <div id="rutas-equipo"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const SUPABASE_URL = 'https://wjsezpswjorgjgqzkllz.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indqc2V6cHN3am9yZ2pncXprbGx6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY4ODk4MjQsImV4cCI6MjA5MjQ2NTgyNH0.FpsJvhskuqQKfX5t8k7VWK8ok18mf3EymocjIqvjXtM';
+
+const PINES_DEFAULT = { 'Mauricio Lopera':'1234','Diego Alejandro Quintero Carbajal':'1234','Eliana Rodas Aguirre':'1234','Olmes Ortega':'1234','Juan Pablo Acevedo Vargas':'1234','Angie Ortiz Giraldo':'1234','Jorge Eliecer Calvo Meza':'1234' };
+
+function getPin(nombre) {
+  return localStorage.getItem('pin_' + nombre) || PINES_DEFAULT[nombre] || '1234';
+}
+
+let currentUser = null;
+let currentRole = null;
+let dashFilter = 'todos';
+
+function getWeekId() {
+  const now = new Date();
+  const d = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+  d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay()||7));
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
+  const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1)/7);
+  return `${d.getUTCFullYear()}-W${String(weekNo).padStart(2,'0')}`;
+}
+
+function getWeekLabel() {
+  const now = new Date();
+  const day = now.getDay();
+  const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+  const lunes = new Date(now.setDate(diff));
+  const viernes = new Date(lunes); viernes.setDate(lunes.getDate()+4);
+  const fmt = d => d.toLocaleDateString('es-CO',{day:'2-digit',month:'short'});
+  return `Semana ${fmt(lunes)} – ${fmt(viernes)}`;
+}
+
+async function sbFetch(path, opts={}) {
+  const { prefer, headers: extraHeaders, method, body } = opts;
+  const fetchOpts = { method: method || 'GET' };
+  if (body) fetchOpts.body = body;
+  fetchOpts.headers = {
+    'apikey': SUPABASE_KEY,
+    'Authorization': `Bearer ${SUPABASE_KEY}`,
+    'Content-Type': 'application/json',
+    'Prefer': prefer || 'return=minimal',
+    ...(extraHeaders || {})
+  };
+  let res;
+  try {
+    res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, fetchOpts);
+  } catch(e) {
+    toast('Error de conexión con la base de datos.','error');
+    return null;
+  }
+  if (method === 'POST' || method === 'DELETE') {
+    if (!res.ok) {
+      const err = await res.text();
+      console.error('Supabase error:', err);
+      toast('Error al guardar: ' + err.substring(0,80), 'error');
+      return null;
+    }
+    return res;
+  }
+  return res.json();
+}
+
+function cambiarPin() {
+  const actual = document.getElementById('pin-actual').value;
+  const nuevo = document.getElementById('pin-nuevo').value;
+  const confirmar = document.getElementById('pin-confirmar').value;
+  const msg = document.getElementById('pin-msg');
+
+  if(actual !== getPin(currentUser)) {
+    msg.style.color = 'var(--danger)';
+    msg.textContent = '✗ El PIN actual es incorrecto.';
+    return;
+  }
+  if(nuevo.length < 4) {
+    msg.style.color = 'var(--danger)';
+    msg.textContent = '✗ El nuevo PIN debe tener 4 dígitos.';
+    return;
+  }
+  if(nuevo !== confirmar) {
+    msg.style.color = 'var(--danger)';
+    msg.textContent = '✗ Los PINes no coinciden.';
+    return;
+  }
+  localStorage.setItem('pin_' + currentUser, nuevo);
+  document.getElementById('pin-actual').value='';
+  document.getElementById('pin-nuevo').value='';
+  document.getElementById('pin-confirmar').value='';
+  msg.style.color = 'var(--success)';
+  msg.textContent = '✓ PIN cambiado exitosamente.';
+  toast('PIN actualizado ✓');
+}
+
+async function initDB() {
+  // Crear tablas via RPC no es posible con anon key directamente
+  // Las tablas deben crearse manualmente — verificamos si existen
+  try {
+    await sbFetch('rutas?limit=1');
+    await sbFetch('visitas?limit=1');
+  } catch(e) {}
+}
+
+// LOGIN
+function doLogin() {
+  const val = document.getElementById('login-user').value;
+  const pin = document.getElementById('login-pin').value;
+  if(!val) { document.getElementById('login-error').textContent='Selecciona un usuario.'; return; }
+  const [role, name] = val.split('|');
+  if(pin !== getPin(name)) { document.getElementById('login-error').textContent='PIN incorrecto.'; return; }
+  currentUser = name; currentRole = role;
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('app').style.display='flex';
+  document.getElementById('topbar-name').textContent = name;
+  document.getElementById('topbar-role').textContent = role === 'supervisor' ? 'Gerente Comercial' : 'Vendedor';
+  buildNav();
+  showSection(role === 'supervisor' ? 'sec-dashboard' : 'sec-ruteo');
+}
+
+function doLogout() {
+  currentUser = null; currentRole = null;
+  document.getElementById('login-screen').style.display='flex';
+  document.getElementById('app').style.display='none';
+  document.getElementById('login-pin').value='';
+  document.getElementById('login-error').textContent='';
+}
+
+function buildNav() {
+  const nav = document.getElementById('nav-tabs');
+  nav.innerHTML = '';
+  const tabs = currentRole === 'supervisor'
+    ? [['sec-dashboard','📊 Dashboard'],['sec-rutas-sup','🗺️ Rutas del equipo']]
+    : [['sec-ruteo','📅 Mi Ruta'],['sec-visitas','✅ Visitas'],['sec-stats','📈 Mis Stats'],['sec-config','⚙️ Mi PIN']];
+  tabs.forEach(([id,label],i) => {
+    const b = document.createElement('button');
+    b.className = 'nav-tab' + (i===0?' active':'');
+    b.textContent = label;
+    b.onclick = () => { document.querySelectorAll('.nav-tab').forEach(x=>x.classList.remove('active')); b.classList.add('active'); showSection(id); };
+    nav.appendChild(b);
+  });
+}
+
+function showSection(id) {
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if(id==='sec-config') { document.getElementById('pin-actual').value=''; document.getElementById('pin-nuevo').value=''; document.getElementById('pin-confirmar').value=''; document.getElementById('pin-msg').textContent=''; }
+  if(id==='sec-ruteo') loadRuteo();
+  if(id==='sec-visitas') loadVisitas();
+  if(id==='sec-stats') loadMyStats();
+  if(id==='sec-dashboard') loadDashboard();
+  if(id==='sec-rutas-sup') loadRutasSuper();
+}
+
+// RUTEO
+async function agregarRuta() {
+  const nombre = document.getElementById('r-nombre').value.trim();
+  const ciudad = document.getElementById('r-ciudad').value.trim();
+  if(!nombre || !ciudad) { toast('Completa nombre y ciudad','error'); return; }
+  const data = {
+    vendedor: currentUser,
+    semana: getWeekId(),
+    dia: document.getElementById('r-dia').value,
+    tipo: document.getElementById('r-tipo').value,
+    nombre_cliente: nombre,
+    ciudad: ciudad,
+    notas: document.getElementById('r-notas').value.trim()
+  };
+  await sbFetch('rutas', { method:'POST', body: JSON.stringify(data), prefer:'return=minimal' });
+  document.getElementById('r-nombre').value='';
+  document.getElementById('r-ciudad').value='';
+  document.getElementById('r-notas').value='';
+  toast('Visita agregada a la ruta ✓');
+  loadRuteo();
+}
+
+async function loadRuteo() {
+  document.getElementById('ruteo-semana').textContent = getWeekLabel();
+  const data = await sbFetch(`rutas?vendedor=eq.${encodeURIComponent(currentUser)}&semana=eq.${getWeekId()}&order=dia.asc`);
+  const dias = ['Lunes','Martes','Miércoles','Jueves','Viernes'];
+  const byDia = {};
+  dias.forEach(d => byDia[d]=[]);
+  if(Array.isArray(data)) data.forEach(r => { if(byDia[r.dia]) byDia[r.dia].push(r); });
+  const cont = document.getElementById('ruteo-dias');
+  cont.innerHTML = dias.map(d => `
+    <div class="day-card">
+      <div class="day-name">${d}</div>
+      <div class="day-visits">
+        ${byDia[d].length ? byDia[d].map(r=>`
+          <div class="visit-chip ${r.tipo==='prospecto'?'prospecto':''}">
+            <div class="vc-name">${r.nombre_cliente}</div>
+            <div class="vc-city">📍 ${r.ciudad} · <span style="text-transform:capitalize">${r.tipo}</span></div>
+          </div>`).join('') : '<div style="font-size:11px;color:var(--text-muted)">Sin visitas</div>'}
+      </div>
+    </div>`).join('');
+
+  // poblar selector de visitas
+  const sel = document.getElementById('v-cliente');
+  sel.innerHTML = '<option value="">— Selecciona de tu ruta —</option>';
+  if(Array.isArray(data)) data.forEach(r => {
+    const o = document.createElement('option');
+    o.value = r.nombre_cliente + '|' + r.tipo + '|' + r.ciudad;
+    o.textContent = `${r.nombre_cliente} (${r.dia} — ${r.tipo})`;
+    sel.appendChild(o);
+  });
+}
+
+// VISITAS
+let gpsLat = null, gpsLng = null, gpsDir = null;
+
+async function capturarUbicacion() {
+  const status = document.getElementById('gps-status');
+  status.textContent = 'Solicitando ubicación...';
+  status.style.color = 'var(--accent)';
+  try {
+    const pos = await new Promise((resolve, reject) => {
+      if (!navigator.geolocation) { reject(new Error('GPS no disponible en este dispositivo')); return; }
+      navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 15000, enableHighAccuracy: true });
+    });
+    gpsLat = pos.coords.latitude;
+    gpsLng = pos.coords.longitude;
+    status.textContent = '✓ Coordenadas capturadas. Obteniendo dirección...';
+    status.style.color = 'var(--accent)';
+    try {
+      const r = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${gpsLat}&lon=${gpsLng}&format=json`);
+      const geo = await r.json();
+      const dir = geo.display_name || (gpsLat.toFixed(5) + ', ' + gpsLng.toFixed(5));
+      gpsDir = dir;
+      status.textContent = '📍 ' + dir;
+    } catch(e) {
+      gpsDir = gpsLat.toFixed(5) + ', ' + gpsLng.toFixed(5);
+      status.textContent = '📍 ' + gpsDir;
+    }
+    status.style.color = 'var(--success)';
+  } catch(e) {
+    gpsLat = null; gpsLng = null; gpsDir = null;
+    status.textContent = '✗ ' + (e.code === 1 ? 'Permiso denegado — activa la ubicación en Configuración' : e.message);
+    status.style.color = 'var(--danger)';
+  }
+}
+
+async function registrarVisita() {
+  const sel = document.getElementById('v-cliente').value;
+  const fecha = document.getElementById('v-fecha').value;
+  if(!sel || !fecha) { toast('Selecciona cliente y fecha','error'); return; }
+  const [nombre_cliente, tipo, ciudad] = sel.split('|');
+
+  // Usar ubicación ya capturada
+  const lat = gpsLat;
+  const lng = gpsLng;
+
+  const hora = new Date().toTimeString().split(' ')[0];
+  const data = {
+    vendedor: currentUser,
+    semana: getWeekId(),
+    nombre_cliente, tipo, ciudad,
+    fecha,
+    hora_visita: hora,
+    lat, lng, direccion: gpsDir,
+    resultado: document.getElementById('v-resultado').value,
+    pedido: document.getElementById('v-pedido').value === 'si',
+    observaciones: document.getElementById('v-obs').value.trim()
+  };
+  await sbFetch('visitas', { method:'POST', body: JSON.stringify(data), prefer:'return=minimal' });
+  document.getElementById('v-obs').value='';
+  document.getElementById('gps-status').textContent = '';
+  gpsLat = null; gpsLng = null; gpsDir = null;
+  toast(lat ? 'Visita registrada con ubicación ✓' : 'Visita registrada (sin GPS) ✓');
+  loadVisitas();
+}
+
+async function loadVisitas() {
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('v-fecha').value = today;
+  const data = await sbFetch(`visitas?vendedor=eq.${encodeURIComponent(currentUser)}&semana=eq.${getWeekId()}&order=fecha.desc`);
+  const tbody = document.getElementById('visitas-tabla');
+  const empty = document.getElementById('visitas-empty');
+  if(!Array.isArray(data) || data.length===0) { tbody.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display='none';
+  tbody.innerHTML = data.map(v=>`
+    <tr>
+      <td><strong>${v.nombre_cliente}</strong><br><span style="font-size:11px;color:var(--text-muted)">${v.ciudad||''}</span></td>
+      <td>${v.fecha}${v.hora_visita ? '<br><span style="font-size:11px;color:var(--text-muted)">🕐 '+v.hora_visita+'</span>' : ''}</td>
+      <td><span class="badge ${v.tipo==='prospecto'?'badge-blue':'badge-yellow'}">${v.tipo}</span></td>
+      <td>${resultadoBadge(v.resultado)}</td>
+      <td><span class="badge ${v.pedido?'badge-green':'badge-gray'}">${v.pedido?'Sí':'No'}</span></td>
+      <td style="font-size:12px;color:var(--text-muted);max-width:200px">${v.observaciones||'—'}</td>
+      <td>${v.lat ? '<span style="color:var(--success);font-size:12px">📍 GPS ✓</span>' : '<span style="color:var(--text-muted);font-size:12px">Sin GPS</span>'}</td>
+    </tr>`).join('');
+}
+
+function resultadoBadge(r) {
+  const map = { positivo:'badge-green', en_proceso:'badge-yellow', negativo:'badge-red', no_encontrado:'badge-gray' };
+  const labels = { positivo:'Positivo', en_proceso:'En proceso', negativo:'Negativo', no_encontrado:'No encontrado' };
+  return `<span class="badge ${map[r]||'badge-gray'}">${labels[r]||r}</span>`;
+}
+
+// MY STATS
+async function loadMyStats() {
+  const rutas = await sbFetch(`rutas?vendedor=eq.${encodeURIComponent(currentUser)}&semana=eq.${getWeekId()}`);
+  const visitas = await sbFetch(`visitas?vendedor=eq.${encodeURIComponent(currentUser)}&semana=eq.${getWeekId()}`);
+  const r = Array.isArray(rutas)?rutas:[];
+  const v = Array.isArray(visitas)?visitas:[];
+  const prospectos = v.filter(x=>x.tipo==='prospecto').length;
+  const pedidos = v.filter(x=>x.pedido).length;
+  const pct = r.length ? Math.round((v.length/r.length)*100) : 0;
+  document.getElementById('my-stats-row').innerHTML = `
+    <div class="stat-card"><div class="stat-num">${r.length}</div><div class="stat-label">Visitas planificadas</div></div>
+    <div class="stat-card"><div class="stat-num">${v.length}</div><div class="stat-label">Visitas realizadas</div></div>
+    <div class="stat-card"><div class="stat-num">${prospectos}</div><div class="stat-label">Prospectos visitados</div></div>
+    <div class="stat-card"><div class="stat-num">${pedidos}</div><div class="stat-label">Pedidos generados</div></div>
+    <div class="stat-card"><div class="stat-num">${pct}%</div><div class="stat-label">Cumplimiento</div></div>`;
+  document.getElementById('progreso-semanal').innerHTML = `
+    <div style="margin-bottom:8px;font-size:13px;color:var(--text-muted)">Visitas realizadas vs planificadas: <strong style="color:var(--text)">${v.length} / ${r.length}</strong></div>
+    <div class="progress-bar"><div class="progress-fill" style="width:${Math.min(pct,100)}%"></div></div>
+    <div style="margin-top:6px;font-size:12px;color:var(--accent)">${pct}% de cumplimiento esta semana</div>`;
+}
+
+// DASHBOARD SUPERVISOR
+async function loadDashboard() {
+  const vendedores = ['Diego Alejandro Quintero Carbajal','Eliana Rodas Aguirre','Olmes Ortega','Juan Pablo Acevedo Vargas','Angie Ortiz Giraldo','Jorge Eliecer Calvo Meza'];
+  let allRutas = [], allVisitas = [];
+  for(const v of vendedores) {
+    const r = await sbFetch(`rutas?vendedor=eq.${encodeURIComponent(v)}&semana=eq.${getWeekId()}`);
+    const vis = await sbFetch(`visitas?vendedor=eq.${encodeURIComponent(v)}&semana=eq.${getWeekId()}`);
+    if(Array.isArray(r)) allRutas = allRutas.concat(r.map(x=>({...x,_vend:v})));
+    if(Array.isArray(vis)) allVisitas = allVisitas.concat(vis.map(x=>({...x,_vend:v})));
+  }
+
+  const filtV = dashFilter === 'todos' ? allVisitas : allVisitas.filter(x=>x._vend===dashFilter);
+  const filtR = dashFilter === 'todos' ? allRutas : allRutas.filter(x=>x._vend===dashFilter);
+
+  // Stats globales
+  const prospectos = filtV.filter(x=>x.tipo==='prospecto').length;
+  const pedidos = filtV.filter(x=>x.pedido).length;
+  const pct = filtR.length ? Math.round((filtV.length/filtR.length)*100) : 0;
+  document.getElementById('dash-stats').innerHTML = `
+    <div class="stat-card"><div class="stat-num">${filtR.length}</div><div class="stat-label">Rutas planificadas</div></div>
+    <div class="stat-card"><div class="stat-num">${filtV.length}</div><div class="stat-label">Visitas realizadas</div></div>
+    <div class="stat-card"><div class="stat-num">${prospectos}</div><div class="stat-label">Prospectos visitados</div></div>
+    <div class="stat-card"><div class="stat-num">${pedidos}</div><div class="stat-label">Pedidos generados</div></div>
+    <div class="stat-card"><div class="stat-num">${pct}%</div><div class="stat-label">Cumplimiento equipo</div></div>`;
+
+  // Por vendedor
+  const vcont = document.getElementById('dash-vendedores');
+  vcont.innerHTML = vendedores.map(v=>{
+    const vr = allRutas.filter(x=>x._vend===v).length;
+    const vv = allVisitas.filter(x=>x._vend===v).length;
+    const vp = allVisitas.filter(x=>x._vend===v&&x.tipo==='prospecto').length;
+    const vped = allVisitas.filter(x=>x._vend===v&&x.pedido).length;
+    const vpct = vr ? Math.round((vv/vr)*100) : 0;
+    const firstName = v.split(' ')[0];
+    return `<div class="vendedor-row">
+      <div class="vendedor-info">
+        <div class="vname">${v}</div>
+        <div class="progress-bar" style="width:120px;margin-top:6px"><div class="progress-fill" style="width:${Math.min(vpct,100)}%"></div></div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:3px">${vpct}% cumplimiento</div>
+      </div>
+      <div class="vendedor-stats">
+        <div class="vstat"><div class="vstat-num">${vr}</div><div class="vstat-label">Plan.</div></div>
+        <div class="vstat"><div class="vstat-num">${vv}</div><div class="vstat-label">Real.</div></div>
+        <div class="vstat"><div class="vstat-num">${vp}</div><div class="vstat-label">Prosp.</div></div>
+        <div class="vstat"><div class="vstat-num">${vped}</div><div class="vstat-label">Pedidos</div></div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Tabla
+  const tbody = document.getElementById('dash-tabla');
+  const empty = document.getElementById('dash-empty');
+  if(filtV.length===0) { tbody.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display='none';
+  tbody.innerHTML = filtV.sort((a,b)=>b.fecha>a.fecha?1:-1).map(v=>`
+    <tr>
+      <td style="font-size:12px">${v._vend.split(' ')[0]} ${v._vend.split(' ')[1]||''}</td>
+      <td><strong>${v.nombre_cliente}</strong></td>
+      <td>${v.fecha}</td>
+      <td><span class="badge ${v.tipo==='prospecto'?'badge-blue':'badge-yellow'}">${v.tipo}</span></td>
+      <td>${resultadoBadge(v.resultado)}</td>
+      <td><span class="badge ${v.pedido?'badge-green':'badge-gray'}">${v.pedido?'Sí':'No'}</span></td>
+      <td>${v.lat ? '<span style="color:var(--success);font-size:12px">📍 ✓</span>' : '<span style="color:var(--text-muted);font-size:11px">—</span>'}</td>
+    </tr>`).join('');
+}
+
+function filterDash(f, el) {
+  dashFilter = f;
+  document.querySelectorAll('.sup-tab').forEach(x=>x.classList.remove('active'));
+  el.classList.add('active');
+  loadDashboard();
+}
+
+// RUTAS EQUIPO (supervisor)
+async function loadRutasSuper() {
+  const vendedores = ['Diego Alejandro Quintero Carbajal','Eliana Rodas Aguirre','Olmes Ortega','Juan Pablo Acevedo Vargas','Angie Ortiz Giraldo','Jorge Eliecer Calvo Meza'];
+  const cont = document.getElementById('rutas-equipo');
+  cont.innerHTML = '<div style="color:var(--text-muted);font-size:13px">Cargando rutas...</div>';
+  let html = '';
+  for(const v of vendedores) {
+    const r = await sbFetch(`rutas?vendedor=eq.${encodeURIComponent(v)}&semana=eq.${getWeekId()}&order=dia.asc`);
+    const dias = ['Lunes','Martes','Miércoles','Jueves','Viernes'];
+    const byDia = {}; dias.forEach(d=>byDia[d]=[]);
+    if(Array.isArray(r)) r.forEach(x=>{ if(byDia[x.dia]) byDia[x.dia].push(x); });
+    html += `<div style="margin-bottom:24px">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;color:var(--accent);margin-bottom:10px">👤 ${v}</div>
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px">
+        ${dias.map(d=>`<div class="day-card">
+          <div class="day-name">${d}</div>
+          <div class="day-visits">
+            ${byDia[d].length ? byDia[d].map(x=>`<div class="visit-chip ${x.tipo==='prospecto'?'prospecto':''}">
+              <div class="vc-name">${x.nombre_cliente}</div>
+              <div class="vc-city">📍 ${x.ciudad}</div>
+            </div>`).join('') : '<div style="font-size:11px;color:var(--text-muted)">—</div>'}
+          </div>
+        </div>`).join('')}
+      </div>
+    </div>`;
+  }
+  cont.innerHTML = html || '<div class="empty-state"><div class="icon">🗺️</div><p>No hay rutas planificadas esta semana.</p></div>';
+}
+
+function toast(msg, type='success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.background = type==='error' ? 'var(--danger)' : 'var(--success)';
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 3000);
+}
+
+initDB();
+</script>
+</body>
+</html>
