@@ -178,6 +178,7 @@
     border-radius:6px; padding:6px 10px; font-size:12px;
   }
   .visit-chip.prospecto { background:rgba(64,120,232,0.1); border-color:rgba(64,120,232,0.2); }
+  .visit-chip.visitada { background:rgba(46,204,138,0.08); border-color:rgba(46,204,138,0.25); opacity:0.7; }
   .visit-chip .vc-name { font-weight:600; }
   .visit-chip .vc-city { color:var(--text-muted); font-size:11px; }
 
@@ -351,9 +352,33 @@
             </select>
           </div>
         </div>
+        <div class="form-row">
+          <div class="form-field">
+            <label>Lugar de visita</label>
+            <select id="v-lugar" onchange="toggleLugarOtro()">
+              <option value="Obra">Obra</option>
+              <option value="Oficina">Oficina</option>
+              <option value="Otro">Otro</option>
+            </select>
+          </div>
+          <div class="form-field" id="v-lugar-otro-field" style="display:none">
+            <label>Especifica el lugar</label>
+            <input type="text" id="v-lugar-otro" placeholder="Ej: Bodega, Planta...">
+          </div>
+        </div>
         <div class="form-field">
           <label>Observaciones</label>
           <textarea id="v-obs" placeholder="Detalles de la visita, próximos pasos..."></textarea>
+        </div>
+        <div class="form-row" style="margin-top:8px">
+          <div class="form-field">
+            <label>📅 Próxima visita (opcional)</label>
+            <input type="date" id="v-proxima-fecha" placeholder="Fecha de próxima visita">
+          </div>
+          <div class="form-field">
+            <label>Motivo de próxima visita</label>
+            <input type="text" id="v-proxima-motivo" placeholder="Ej: Seguimiento cotización">
+          </div>
         </div>
         <div style="margin-bottom:16px">
           <button class="btn-action" style="background:var(--steel-light);color:var(--text);border:1px solid var(--border);margin-bottom:8px;width:100%" onclick="capturarUbicacion()">📍 Capturar mi ubicación</button>
@@ -557,6 +582,30 @@ function cambiarPin() {
   toast('PIN actualizado ✓');
 }
 
+function toggleLugarOtro() {
+  const sel = document.getElementById('v-lugar').value;
+  document.getElementById('v-lugar-otro-field').style.display = sel === 'Otro' ? 'block' : 'none';
+}
+
+function getWeekIdFromDate(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00');
+  const utc = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  utc.setUTCDate(utc.getUTCDate() + 4 - (utc.getUTCDay() || 7));
+  const yearStart = new Date(Date.UTC(utc.getUTCFullYear(), 0, 1));
+  const weekNo = Math.ceil((((utc - yearStart) / 86400000) + 1) / 7);
+  return `${utc.getUTCFullYear()}-W${String(weekNo).padStart(2, '0')}`;
+}
+
+function getDayNameFromDate(dateStr) {
+  const days = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+  const d = new Date(dateStr + 'T00:00:00');
+  return days[d.getDay()];
+}
+
+async function loadRutas() {
+  loadRuteo();
+}
+
 async function initDB() {
   // Crear tablas via RPC no es posible con anon key directamente
   // Las tablas deben crearse manualmente — verificamos si existen
@@ -641,6 +690,9 @@ async function agregarRuta() {
 async function loadRuteo() {
   document.getElementById('ruteo-semana').textContent = getWeekLabel();
   const data = await sbFetch(`rutas?vendedor=eq.${encodeURIComponent(currentUser)}&semana=eq.${getWeekId()}&order=dia.asc`);
+  const visitasHoy = await sbFetch(`visitas?vendedor=eq.${encodeURIComponent(currentUser)}&semana=eq.${getWeekId()}`);
+  const visitasNombres = Array.isArray(visitasHoy) ? visitasHoy.map(v => v.nombre_cliente) : [];
+  if(Array.isArray(data)) data.forEach(r => { r._visitada = visitasNombres.includes(r.nombre_cliente); });
   const dias = ['Lunes','Martes','Miércoles','Jueves','Viernes'];
   const byDia = {};
   dias.forEach(d => byDia[d]=[]);
@@ -651,9 +703,9 @@ async function loadRuteo() {
       <div class="day-name">${d}</div>
       <div class="day-visits">
         ${byDia[d].length ? byDia[d].map(r=>`
-          <div class="visit-chip ${r.tipo==='prospecto'?'prospecto':''}">
-            <div class="vc-name">${r.nombre_cliente}</div>
-            <div class="vc-city">📍 ${r.ciudad} · <span style="text-transform:capitalize">${r.tipo}</span></div>
+          <div class="visit-chip ${r.tipo==='prospecto'?'prospecto':''} ${r._visitada?'visitada':''}">
+            <div class="vc-name">${r._visitada?'✅ ':''}${r.nombre_cliente}</div>
+            <div class="vc-city">📍 ${r.ciudad} · <span style="text-transform:capitalize">${r.tipo}</span>${r._visitada?' · <span style="color:var(--success)">Realizada</span>':''}</div>
           </div>`).join('') : '<div style="font-size:11px;color:var(--text-muted)">Sin visitas</div>'}
       </div>
     </div>`).join('');
@@ -662,6 +714,7 @@ async function loadRuteo() {
   const sel = document.getElementById('v-cliente');
   sel.innerHTML = '<option value="">— Selecciona de tu ruta —</option>';
   if(Array.isArray(data)) data.forEach(r => {
+    if(r._visitada) return; // Ocultar ya registradas
     const o = document.createElement('option');
     o.value = r.nombre_cliente + '|' + r.tipo + '|' + r.ciudad;
     o.textContent = `${r.nombre_cliente} (${r.dia} — ${r.tipo})`;
@@ -714,6 +767,12 @@ async function registrarVisita() {
   const lng = gpsLng;
 
   const hora = new Date().toTimeString().split(' ')[0];
+  const lugarSel = document.getElementById('v-lugar').value;
+  const lugarOtro = document.getElementById('v-lugar-otro').value.trim();
+  const lugar = lugarSel === 'Otro' ? (lugarOtro || 'Otro') : lugarSel;
+  const proximaFecha = document.getElementById('v-proxima-fecha').value;
+  const proximaMotivo = document.getElementById('v-proxima-motivo').value.trim();
+
   const data = {
     vendedor: currentUser,
     semana: getWeekId(),
@@ -721,15 +780,39 @@ async function registrarVisita() {
     fecha,
     hora_visita: hora,
     lat, lng, direccion: gpsDir,
+    lugar_visita: lugar,
     resultado: document.getElementById('v-resultado').value,
     pedido: document.getElementById('v-pedido').value === 'si',
-    observaciones: document.getElementById('v-obs').value.trim()
+    observaciones: document.getElementById('v-obs').value.trim(),
+    proxima_fecha: proximaFecha || null,
+    proxima_motivo: proximaMotivo || null
   };
   await sbFetch('visitas', { method:'POST', body: JSON.stringify(data), prefer:'return=minimal' });
+
+  // Si tiene próxima visita, agregarla automáticamente al ruteo de esa semana
+  if(proximaFecha) {
+    const proxSemana = getWeekIdFromDate(proximaFecha);
+    const proxDia = getDayNameFromDate(proximaFecha);
+    await sbFetch('rutas', { method:'POST', body: JSON.stringify({
+      vendedor: currentUser,
+      semana: proxSemana,
+      dia: proxDia,
+      tipo: tipo,
+      nombre_cliente: nombre_cliente,
+      ciudad: ciudad,
+      notas: proximaMotivo || 'Seguimiento de visita anterior'
+    }), prefer:'return=minimal' });
+    toast('Visita registrada y próxima cita agendada ✓');
+  } else {
+    toast(lat ? 'Visita registrada con ubicación ✓' : 'Visita registrada (sin GPS) ✓');
+  }
+
   document.getElementById('v-obs').value='';
+  document.getElementById('v-proxima-fecha').value='';
+  document.getElementById('v-proxima-motivo').value='';
   document.getElementById('gps-status').textContent = '';
   gpsLat = null; gpsLng = null; gpsDir = null;
-  toast(lat ? 'Visita registrada con ubicación ✓' : 'Visita registrada (sin GPS) ✓');
+  loadRutas();
   loadVisitas();
 }
 
